@@ -24,8 +24,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated='auto')
 
 @authen.get('/register')
 def register_user(username: str, password: str, email: str, background_tasks: BackgroundTasks):
-    user_exsit = user_repository.find_one(
-        {'username': username}, {'delete': False})
+    user_exsit = user_repository.find_one({'username': username})
     if user_exsit:
         return {'Message': 'User is exist in system'}
     hash_password = generate_hash_password(password)
@@ -70,20 +69,9 @@ async def send_mail_register(email):
         raise HTTPException(status_code=500, detail=e)
 
 
-def create_profile_default(username: str):
-    user_profile_data = {
-        'username': username,
-        'full_name': 'default_fullname',
-        'address': 'default_address',
-        'phone_number': '0938697503'
-    }
-    user_profile_repository.insert_one(user_profile_data)
-
-
 @authen.get('/login')
 def login(username: str, password: str):
-    user_data: UserModel = user_repository.find_one(
-        {'username': username}, {'delete': False})
+    user_data: UserModel = user_repository.find_one({'username': username})
     if user_data:
         hash_password = user_data['password']
         is_match_password = verify_password(password, hash_password)
