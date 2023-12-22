@@ -1,3 +1,4 @@
+import re
 import jwt
 from smtplib import SMTP
 from config.config import *
@@ -7,7 +8,7 @@ from ssl import create_default_context
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from src.models.user_model import UserModel
-from constants.success_log import reponse_success_log
+from constants.success_log import reponse_success_log, reponse_success_log_object
 from src.schemas.user_request import UserLogin, UserRegister
 from bson import ObjectId
 
@@ -38,7 +39,11 @@ class AuthenticateHandler():
             )
 
         access_token = self.generate_access_token(username)
-        return reponse_success_log(200, 'data', access_token)
+        response = {
+            'type_token': 'Bearer',
+            'access_token': access_token
+        }
+        return reponse_success_log_object(200, 'data', response)
 
     @classmethod
     async def register(self, user_register_data: UserRegister, background_tasks: BackgroundTasks):
@@ -53,6 +58,16 @@ class AuthenticateHandler():
 
         email = user_register_data.email
         password = user_register_data.password
+
+        # validation password
+        is_match_regex_password = self.validation_password(password)
+        if is_match_regex_password is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Password doesn't match regex",
+            )
+
+        # hash password
         hash_password = self.generate_hash_password(password)
 
         try:
@@ -68,7 +83,7 @@ class AuthenticateHandler():
                 password=hash_password,
                 email=email
             )
-            # await user_model.commit()
+            await user_model.commit()
             return reponse_success_log(200, 'Success')
         except:
             raise HTTPException(
@@ -90,13 +105,19 @@ class AuthenticateHandler():
     #     user['active'] = True
     #     user.commint()
 
-    # =============================== Token ===============================
+    # =============================== Password ===============================
+
+    def validation_password(password):
+        password_regex = '[A-Za-z0-9@#$%^&+=]{8,}'
+        return re.fullmatch(password_regex, password)
 
     def generate_hash_password(password_request):
         return pwd_context.hash(password_request)
 
     def verify_password(password_request: str, hash_password: str):
         return pwd_context.verify(password_request, hash_password)
+
+    # =============================== Token ===============================
 
     def generate_access_token(username):
         expire = datetime.utcnow() + timedelta(int(ACCESS_TOKEN_EXPIRE_MINUTES))
