@@ -1,8 +1,9 @@
 from fastapi import HTTPException
 from bson.objectid import ObjectId
-from constants.success_log import reponse_success_log
+from constants.success_log import reponse_success_log, reponse_success_log_object
 from src.models.user_profile import UserProfile
 from src.schemas.user_request import UserProfileRequest
+from src.schemas.user_response import UserProfileResponse
 
 
 class UserServiceHandle():
@@ -14,7 +15,12 @@ class UserServiceHandle():
                 status_code=404,
                 detail="Profile not found"
             )
-        return reponse_success_log(200, user_profile)
+        user_profile_response = UserProfileResponse(
+            full_name=user_profile['full_name'],
+            address=user_profile['address'],
+            phone_number=user_profile['phone_number']
+        )
+        return reponse_success_log_object(200, 'data', user_profile_response)
 
     @classmethod
     async def create_profile(self, user_profile_data: UserProfileRequest, current_user):

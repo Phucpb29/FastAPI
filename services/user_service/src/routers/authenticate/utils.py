@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from src.models.user_model import UserModel
 from constants.success_log import reponse_success_log
 from src.schemas.user_request import UserLogin, UserRegister
+from bson import ObjectId
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated='auto')
@@ -37,7 +38,7 @@ class AuthenticateHandler():
             )
 
         access_token = self.generate_access_token(username)
-        return reponse_success_log(200, access_token)
+        return reponse_success_log(200, 'data', access_token)
 
     @classmethod
     async def register(self, user_register_data: UserRegister, background_tasks: BackgroundTasks):
@@ -55,16 +56,19 @@ class AuthenticateHandler():
         hash_password = self.generate_hash_password(password)
 
         try:
-            background_tasks.add_task(
-                self.send_mail_register, email)
+            # send email register for user
+            background_tasks.add_task(self.send_mail_register, email)
+
+            # write log register in file log
             background_tasks.add_task(
                 self.write_log_register, username, datetime.now())
+
             user_model = UserModel(
                 username=username,
                 password=hash_password,
                 email=email
             )
-            await user_model.commit()
+            # await user_model.commit()
             return reponse_success_log(200, 'Success')
         except:
             raise HTTPException(
@@ -72,6 +76,19 @@ class AuthenticateHandler():
                 detail="Server error exception",
                 headers={"WWW-Authenticate": "Bearer"}
             )
+
+    # Function verify active user from email
+    # @classmethod
+    # async def active_user(current_user: str):
+    #     user = UserModel.collection.find_one({'_id': ObjectId(current_user)})
+    #     if user is None:
+    #         raise HTTPException(
+    #             status_code=401,
+    #             detail='No matching user'
+    #         )
+
+    #     user['active'] = True
+    #     user.commint()
 
     # =============================== Token ===============================
 
@@ -92,16 +109,16 @@ class AuthenticateHandler():
 
     # =============================== Tasks background ===============================
     async def write_log_register(username, date):
-        with open('src/log/register.log', mode='a') as log_file:
+        file_direct = './src/log/register.log'
+        with open(file_direct, mode='w', encoding='utf-8') as file_log_register:
             content = f'New user has register: {username} {date} \n'
-        log_file.write(content)
-        log_file.close()
+            file_log_register.write(content)
 
     async def send_mail_register(email):
         try:
             msg = MIMEText('Register success', "html")
             msg['Subject'] = 'Notify register from FastAPI demo'
-            msg['From'] = EMAIL_USER
+            msg['From'] = EMAIL_FULL_NAME
             msg['To'] = email
 
             with SMTP(HOST, PORT) as server:
@@ -111,6 +128,5 @@ class AuthenticateHandler():
                 server.login(EMAIL_USER, EMAIL_PASSWORD)
                 server.send_message(msg)
                 server.quit
-            return {"message": "Email sent successfully"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=e)

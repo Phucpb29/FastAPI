@@ -18,6 +18,12 @@ async def register(user_register_data: UserRegister, background_tasks: Backgroun
     resposne = await AuthenticateHandler.register(user_register_data, background_tasks)
     return resposne
 
+# API verify active user from email
+# @rooter.get('/active')
+# async def active(current_user: str = Depends(get_current_user)):
+#     await AuthenticateHandler.active_user(current_user)
+#     return reponse_success_log(200, 'Success')
+
 
 @rooter.get("/whoami")
 def whoami(current_user: str = Depends(get_current_user)):

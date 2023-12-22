@@ -7,3 +7,4 @@ class UserModel(Document):
     username = fields.StringField(allow_none=False)
     password = fields.StringField(allow_none=False)
     email = fields.StringField(allow_none=False)
+    # active = fields.BooleanField(default=False)
